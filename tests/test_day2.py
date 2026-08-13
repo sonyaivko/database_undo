@@ -66,7 +66,14 @@ def count_customers(conn, w_id, d_id):
 
 if __name__ == "__main__":
     conn = psycopg2.connect(**CONN_PARAMS)
-
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM DISTRICT WHERE d_id=11 AND d_w_id=1")
+    if cur.fetchone() is None:
+        cur.execute(
+            "INSERT INTO DISTRICT VALUES (11, 1, 'D1_11', 'x','x','x','MA','000011111', 0.05, 30000.0, 3001)")
+        conn.commit()
+    cur.close()
+    
     print("=" * 60)
     print("TEST 1: fresh district, no pre-existing rows -> should be one pure box")
     print("=" * 60)
