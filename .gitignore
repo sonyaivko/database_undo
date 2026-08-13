@@ -1,3 +1,5 @@
+# Postgres binary storage
+
 pgdata/
 *.sif
 __pycache__/
