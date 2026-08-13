@@ -1,7 +1,8 @@
-# Postgres binary storage
-
 pgdata/
 *.sif
 __pycache__/
 .venv/
 *.pyc
+.apptainer_cache/
+pgrun/
+*.log
