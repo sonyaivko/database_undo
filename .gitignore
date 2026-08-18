@@ -6,3 +6,5 @@ __pycache__/
 .apptainer_cache/
 pgrun/
 *.log
+ncvoter*.txt 
+
