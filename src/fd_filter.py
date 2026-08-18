@@ -22,7 +22,7 @@ def rhs_majority_fraction(rows, rhs_col):
     counts = Counter(r[rhs_col] for r in rows)
     return counts.most_common(1)[0][1] / len(rows)
 
-def filter_usable_fds(fds, rows, min_avg_group_size=2.0, exclude_cols=()):
+def filter_usable_fds(fds, rows, min_avg_group_size=2.0, exclude_cols=(), max_rhs_majority_fraction=0.98):
     """fds: list of (lhs_cols: list[str], rhs_col: str) tuples.
     exclude_cols: columns to drop from LHS consideration outright."""
     usable = []
