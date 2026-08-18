@@ -1,3 +1,5 @@
+-- TPC-C Schema loaded from py-tpcc/pytpcc/tpcc.sql 
+
 CREATE TABLE WAREHOUSE (
   W_ID SMALLINT DEFAULT '0' NOT NULL,
   W_NAME VARCHAR(16) DEFAULT NULL,

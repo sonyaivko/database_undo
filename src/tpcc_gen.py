@@ -12,18 +12,12 @@ import string
 import datetime
 import psycopg2 # for DB connection 
 
+from tpcc_rows import rand_str, rand_zip, make_customer_row
+
 CONN_PARAMS = dict(host="localhost", port=5432, dbname="undo_test",
                     user="undo_user", password="undo_pass")
 
 random.seed(42)  # reproducible runs -- unseed later if you want variance across repeats
-
-
-def rand_str(n):
-    return "".join(random.choices(string.ascii_uppercase + string.ascii_lowercase, k=n))
-
-
-def rand_zip():
-    return "".join(random.choices(string.digits, k=4)) + "11111"
 
 # generate tuples according to tpc-c schema 
 
@@ -59,20 +53,13 @@ def gen_items(n):
         ))
     return rows
 
-
+# returns a list of dicts 
 def gen_customers(n_warehouses, districts_per_wh, customers_per_district):
     rows = []
     for w_id in range(1, n_warehouses + 1):
         for d_id in range(1, districts_per_wh + 1):
             for c_id in range(1, customers_per_district + 1):
-                rows.append((
-                    c_id, d_id, w_id, rand_str(8), "OE", rand_str(8),
-                    rand_str(16), rand_str(16), rand_str(16), "MA", rand_zip(),
-                    "".join(random.choices(string.digits, k=10)),
-                    datetime.datetime.now(), random.choice(["GC", "BC"]),
-                    50000.0, round(random.uniform(0.0, 0.5), 4),
-                    -10.0, 10.0, 1, 0, rand_str(100),
-                ))
+                rows.append(make_customer_row(c_id, d_id, w_id))
     return rows
 
 # helper for bulk-inserting tuples
@@ -80,8 +67,13 @@ def load(conn, table, rows, cols=None):
     if not rows:
         return
     cur = conn.cursor()
-    placeholders = ",".join(["%s"] * len(rows[0]))
-    col_clause = f"({cols})" if cols else ""
+
+    if isinstance(rows[0], dict):
+        cols = list(rows[0].keys())
+        values = [[r[c] for c in cols] for r in rows]
+    else:
+        values = rows
+    col_clause = f"({','.join(cols)})" if cols else ""
     cur.execute(f"SET client_min_messages TO WARNING")
     from psycopg2.extras import execute_values
     sql = f"INSERT INTO {table} {col_clause} VALUES %s"
@@ -96,7 +88,7 @@ if __name__ == "__main__":
 
     N_WAREHOUSES = 2
     DISTRICTS_PER_WH = 10
-    CUSTOMERS_PER_DISTRICT = 300  # small slice of the real 3000, fine for dev
+    CUSTOMERS_PER_DISTRICT = 300  # small slice of the real 3000
 
     print("Generating + loading WAREHOUSE...")
     load(conn, "WAREHOUSE", gen_warehouses(N_WAREHOUSES))

@@ -1,12 +1,8 @@
-# checks correctness 
-
 import json
-import random
-import string
-import datetime
 import psycopg2
 from psycopg2.extras import RealDictCursor, execute_values
 from undo_lib import log_insertion, undo_insertion, count_in_box
+from tpcc_rows import make_customer_row
 
 
 def box_storage_bytes(boxes, exception_ids):
@@ -19,23 +15,6 @@ def naive_storage_bytes(pk_tuples):
 CONN_PARAMS = dict(host="localhost", port=5432, dbname="undo_test",
                     user="undo_user", password="undo_pass")
 PK_COLS = ["c_w_id", "c_d_id", "c_id"]
-
-
-def rand_str(n):
-    return "".join(random.choices(string.ascii_uppercase + string.ascii_lowercase, k=n))
-
-
-def make_customer_row(c_id, d_id, w_id):
-    return dict(
-        c_id=c_id, c_d_id=d_id, c_w_id=w_id, c_first=rand_str(8), c_middle="OE",
-        c_last=rand_str(8), c_street_1=rand_str(16), c_street_2=rand_str(16),
-        c_city=rand_str(16), c_state="MA", c_zip=rand_str(9),
-        c_phone="".join(random.choices(string.digits, k=10)),
-        c_since=datetime.datetime.now(), c_credit=random.choice(["GC", "BC"]),
-        c_credit_lim=50000.0, c_discount=round(random.uniform(0, 0.5), 4),
-        c_balance=-10.0, c_ytd_payment=10.0, c_payment_cnt=1, c_delivery_cnt=0,
-        c_data=rand_str(50),
-    )
 
 
 def insert_rows(conn, rows):
@@ -68,6 +47,11 @@ def count_customers(conn, w_id, d_id):
 
 if __name__ == "__main__":
     conn = psycopg2.connect(**CONN_PARAMS)
+
+    # Test 1 needs a genuinely empty district (FK requires it to exist in
+    # DISTRICT first). This was previously a manual one-off command -- made
+    # idempotent and part of the script so a fresh environment doesn't need
+    # a remembered setup step.
     cur = conn.cursor()
     cur.execute("SELECT 1 FROM DISTRICT WHERE d_id=11 AND d_w_id=1")
     if cur.fetchone() is None:
@@ -75,7 +59,8 @@ if __name__ == "__main__":
             "INSERT INTO DISTRICT VALUES (11, 1, 'D1_11', 'x','x','x','MA','000011111', 0.05, 30000.0, 3001)")
         conn.commit()
     cur.close()
-    
+
+
     print("=" * 60)
     print("TEST 1: fresh district, no pre-existing rows -> should be one pure box")
     print("=" * 60)

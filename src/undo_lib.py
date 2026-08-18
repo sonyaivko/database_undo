@@ -1,9 +1,6 @@
 """
 logInsertion / findPartitions / UndoInsertion
 
-    createBoundingBox bounds ALL columns, not just the "varying" ones.
-    - varying columns (>1 distinct value in the batch) -> range (numeric) or
-
 Notes:    
     - maxGapSplit here only considers numeric/orderable columns.
     Categorical (string) columns still get a set-membership condition in the box, but aren't
