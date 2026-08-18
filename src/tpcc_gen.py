@@ -1,18 +1,16 @@
 """
 Lightweight TPC-C-shaped data generator for the undo-mechanism experiments.
 
-We deliberately do NOT use py-tpcc's driver/worker/coordinator framework --
-it's Python 2 (uses the removed `commands` module) and it's built to run the
-full mixed transaction workload (NewOrder/Payment/Delivery/...), which is
-more than we need. We only need realistic INSERT batches shaped like TPC-C
-rows to exercise logInsertion / findPartitions, and realistic DELETE targets
-to exercise the FD-patch path. This generates directly against the real
-TPC-C DDL loaded from py-tpcc/pytpcc/tpcc.sql (adapted for Postgres).
+Do not use py-tpcc's driver framework as we do not use full mixed-transaction benchmark. 
+
+Only use realistic INSERT batches shaped like TPC-C rows for logInsertion, findPartitions 
+and DELETE for FD-patch algorithm. 
+
 """
 import random
 import string
 import datetime
-import psycopg2
+import psycopg2 # for DB connection 
 
 CONN_PARAMS = dict(host="localhost", port=5432, dbname="undo_test",
                     user="undo_user", password="undo_pass")
@@ -27,6 +25,7 @@ def rand_str(n):
 def rand_zip():
     return "".join(random.choices(string.digits, k=4)) + "11111"
 
+# generate tuples according to tpc-c schema 
 
 def gen_warehouses(n):
     rows = []
@@ -62,7 +61,6 @@ def gen_items(n):
 
 
 def gen_customers(n_warehouses, districts_per_wh, customers_per_district):
-    """Returns list of (row, id_tuple) so callers can hand IDs to logInsertion."""
     rows = []
     for w_id in range(1, n_warehouses + 1):
         for d_id in range(1, districts_per_wh + 1):
@@ -77,7 +75,7 @@ def gen_customers(n_warehouses, districts_per_wh, customers_per_district):
                 ))
     return rows
 
-
+# helper for bulk-inserting tuples
 def load(conn, table, rows, cols=None):
     if not rows:
         return
@@ -91,6 +89,7 @@ def load(conn, table, rows, cols=None):
     conn.commit()
     cur.close()
 
+# populates the schema. only 4/9 tables
 
 if __name__ == "__main__":
     conn = psycopg2.connect(**CONN_PARAMS)

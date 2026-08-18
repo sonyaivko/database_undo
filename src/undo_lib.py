@@ -1,58 +1,40 @@
 """
-Day 2: logInsertion / findPartitions / UndoInsertion, implemented against
-real Postgres so contamination() and countInBox() are real SQL, not mocked.
+logInsertion / findPartitions / UndoInsertion
 
-Design note / amendment flagged to the user:
     createBoundingBox bounds ALL columns, not just the "varying" ones.
     - varying columns (>1 distinct value in the batch) -> range (numeric) or
-      set (categorical) condition, and count toward numDims.
-    - constant columns (1 distinct value) -> equality condition, but do NOT
-      count toward numDims.
-    Rationale: omitting constant columns from the box's WHERE clause makes
-    the box's scope far too wide (e.g. a C_ID range with no C_W_ID/C_D_ID
-    filter matches every other district), which corrupts both the
-    contamination measurement and, at undo time, risks deleting unrelated
-    rows inserted later by other transactions.
 
-Open design question (Day 2, not yet resolved): maxGapSplit here only
-considers numeric/orderable columns. Categorical (string) columns still get
-a set-membership condition in the box, but they are not currently candidates
-for the *split* dimension -- that needs a defined "gap" notion for
-unordered categoricals (e.g. frequency-based bucketing) which the original
-pseudocode doesn't specify. Flagging rather than inventing one silently.
+Notes:    
+    - maxGapSplit here only considers numeric/orderable columns.
+    Categorical (string) columns still get a set-membership condition in the box, but aren't
+    candidates for the *split* dimension. 
 """
 import datetime
 import psycopg2
 from psycopg2 import sql as pgsql
 
-MIN_PROGRESS = 2.0  # tunable; see Day 3 sweep
+# progress tracker variable 
+MIN_PROGRESS = 2.0  
 
-# A categorical column only earns a spot in the box if its distinct-value
-# count is at or below this cap -- above it, a "set" condition costs as much
-# as just listing the rows, so it buys no compression. Tunable; worth
-# sweeping in Day 3 (higher cap = more selective boxes but bigger to store).
+# max cardinality considered before falling back to exception IDs 
 CATEGORICAL_CARDINALITY_CAP = 10
 
 NUMERIC_TYPES = (int, float, datetime.datetime, datetime.date)
 
-
 def is_numeric(v):
     return isinstance(v, NUMERIC_TYPES) and not isinstance(v, bool)
-
 
 def pk_tuple(row, pk_cols):
     return tuple(row[c] for c in pk_cols)
 
-
 def compute_dims(rows, cols):
-    """Classifies each column for this batch into:
-      - constant: single distinct value -> free equality condition
-      - cheap_varying: numeric/datetime range, OR categorical at/under the
-        cardinality cap -> counts toward numDims, included in the box
-      - expensive_varying: high-cardinality categorical -> excluded from
-        both numDims and the box entirely; a set condition here costs as
-        much as listing the rows, so it can't help compression.
-    Returns (cheap_varying, constant, expensive_varying).
+    """Classifies each column:
+      - constant: single distinct value 
+      - cheap_varying: numeric/datetime range, or categorical at/under 
+        categorical_cardinality_cap -> counts toward numDims
+      - expensive_varying: excluded from both numDims and the box  
+
+    returns (cheap_varying, constant, expensive_varying).
     """
     cheap, constant, expensive = [], [], []
     for c in cols:
@@ -69,8 +51,7 @@ def compute_dims(rows, cols):
 
 
 def create_bounding_box(rows, cheap_varying, constant_cols):
-    """Note: expensive_varying columns are deliberately NOT passed in here --
-    they never appear in the box (see compute_dims docstring)."""
+   # creates bounding box based off the MIN and MAX
     box = {"range": {}, "set": {}, "eq": {}}
     for c in constant_cols:
         box["eq"][c] = rows[0][c]
@@ -84,7 +65,7 @@ def create_bounding_box(rows, cheap_varying, constant_cols):
 
 
 def box_where_clause(box):
-    """Builds a parameterized WHERE clause + params list for the box."""
+    # builds a parameterized WHERE clause for the box. 
     clauses, params = [], []
     for c, v in box["eq"].items():
         clauses.append(pgsql.SQL("{} = %s").format(pgsql.Identifier(c)))
@@ -99,6 +80,7 @@ def box_where_clause(box):
 
 
 def count_in_box(conn, table, box):
+    # returns the total number of rows in the table that match the bounding box 
     where, params = box_where_clause(box)
     q = pgsql.SQL("SELECT COUNT(*) FROM {} WHERE {}").format(pgsql.Identifier(table.lower()), where)
     cur = conn.cursor()
@@ -109,18 +91,19 @@ def count_in_box(conn, table, box):
 
 
 def contamination(conn, table, box, n_new):
-    """Ratio of (rows matched by box beyond the new batch) to (new batch rows in box).
-    0 = perfectly pure (no old rows captured). Higher = worse."""
+    # returns the ratio of old / new batch rows in box
+    # 0 = PURE, no old rows 
     total = count_in_box(conn, table, box)
     old = total - n_new
     if old < 0:
-        # Shouldn't happen if box truly contains all n_new rows; guard anyway.
         old = 0
     return old / n_new if n_new else float("inf")
 
 
 def max_gap_split(rows, varying_cols):
-    """Only considers numeric/orderable columns (see module docstring)."""
+    # Finds the split with the largest numerical gap.
+    # categorical splitting is unimplemented. 
+
     best = None  # (normalized_gap, dim, cut_val)
     for c in varying_cols:
         vals = sorted(set(r[c] for r in rows))
@@ -151,7 +134,7 @@ def find_partitions(conn, table, rows, pk_cols, boxes, exception_ids):
         return
     cols = list(rows[0].keys())
     cheap, constant, _expensive = compute_dims(rows, cols)
-    numDims = len(cheap)
+    numDims = len(cheap) # number of columns that the CURRENT candidate box would need to bound 
     if len(rows) < 2 * numDims:
         exception_ids.extend(pk_tuple(r, pk_cols) for r in rows)
         return
@@ -174,17 +157,24 @@ def log_insertion(conn, table, batch_rows, pk_cols):
     cols = list(batch_rows[0].keys())
     cheap, constant, _expensive = compute_dims(batch_rows, cols)
     numDims = len(cheap)
+
+    # if batch is small enough, storing IDs is cheaper
     if len(batch_rows) < 2 * numDims:
         exception_ids.extend(pk_tuple(r, pk_cols) for r in batch_rows)
         return boxes, exception_ids
     box = create_bounding_box(batch_rows, cheap, constant)
+
+    # perfectly bounded 
     if count_in_box(conn, table, box) == len(batch_rows):
         boxes.append(box)
         return boxes, exception_ids
+    
     dim, val = max_gap_split(batch_rows, cheap)
+    # no gap exists (low=high everywhere)
     if dim is None:
         exception_ids.extend(pk_tuple(r, pk_cols) for r in batch_rows)
         return boxes, exception_ids
+    
     left = [r for r in batch_rows if r[dim] <= val]
     right = [r for r in batch_rows if r[dim] > val]
     box_left = create_bounding_box(left, *compute_dims(left, cols)[:2])
@@ -192,16 +182,21 @@ def log_insertion(conn, table, batch_rows, pk_cols):
     cL = contamination(conn, table, box_left, len(left))
     cR = contamination(conn, table, box_right, len(right))
     c_parent = contamination(conn, table, box, len(batch_rows))
-    proceed = (min(cL, cR) == 0) or (c_parent / min(cL, cR) >= MIN_PROGRESS if min(cL, cR) else True)
+
+    # if split results in at least one child box to be MIN_PROGRESS times more pure than original, continue. 
+    proceed = True if min(cL, cR) == 0 else (c_parent / min(cL, cR) >= MIN_PROGRESS)   
     if not proceed:
         exception_ids.extend(pk_tuple(r, pk_cols) for r in batch_rows)
         return boxes, exception_ids
+
+    # recursive calls
     find_partitions(conn, table, left, pk_cols, boxes, exception_ids)
     find_partitions(conn, table, right, pk_cols, boxes, exception_ids)
     return boxes, exception_ids
 
 
 def undo_insertion(conn, table, boxes, exception_ids, pk_cols):
+    # delete via each box's WHERE clause, and exceptions. 
     cur = conn.cursor()
     deleted = 0
     for box in boxes:
