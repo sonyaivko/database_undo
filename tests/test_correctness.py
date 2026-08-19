@@ -1,3 +1,8 @@
+# test bounding box: 
+# - check that inserting tuples into an empty region, then undoing correctly deletes all
+# - check that inserting tuples into a region with 300 others is correctly undone
+# and that other regions are left untouched 
+
 import json
 import psycopg2
 from psycopg2.extras import RealDictCursor, execute_values
@@ -48,10 +53,6 @@ def count_customers(conn, w_id, d_id):
 if __name__ == "__main__":
     conn = psycopg2.connect(**CONN_PARAMS)
 
-    # Test 1 needs a genuinely empty district (FK requires it to exist in
-    # DISTRICT first). This was previously a manual one-off command -- made
-    # idempotent and part of the script so a fresh environment doesn't need
-    # a remembered setup step.
     cur = conn.cursor()
     cur.execute("SELECT 1 FROM DISTRICT WHERE d_id=11 AND d_w_id=1")
     if cur.fetchone() is None:
@@ -62,7 +63,7 @@ if __name__ == "__main__":
 
 
     print("=" * 60)
-    print("TEST 1: fresh district, no pre-existing rows -> should be one pure box")
+    print("TEST 1: insert with no pre-existing rows -> should be one pure box")
     print("=" * 60)
     new_rows = [make_customer_row(c_id, d_id=11, w_id=1) for c_id in range(1, 41)]
     insert_rows(conn, new_rows)

@@ -1,10 +1,7 @@
 """
-Lightweight TPC-C-shaped data generator for the undo-mechanism experiments.
+TPC-C-shaped data generator for the undo-mechanism experiments.
 
-Do not use py-tpcc's driver framework as we do not use full mixed-transaction benchmark. 
-
-Only use realistic INSERT batches shaped like TPC-C rows for logInsertion, findPartitions 
-and DELETE for FD-patch algorithm. 
+- Only use realistic INSERT batches shaped like TPC-C rows 
 
 """
 import random

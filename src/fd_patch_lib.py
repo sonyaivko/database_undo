@@ -68,7 +68,7 @@ def undo_deletion(conn, table, pk_vals, predictors, fd_patch, rules, topo_order)
     reconstructed = dict(pk_vals)
     reconstructed.update(predictors)
 
-    for col in topo_order:
+    for col in topo_order: # walk through topological sort 
         if col in reconstructed:
             continue
         if col not in rules:
@@ -89,12 +89,15 @@ def undo_deletion(conn, table, pk_vals, predictors, fd_patch, rules, topo_order)
 
     cur = conn.cursor()
     where_parts = [pgsql.SQL("{} = %s").format(pgsql.Identifier(c)) for c in pk_vals]
+    
+    # check if tuple exists 
     cur.execute(
         pgsql.SQL("SELECT 1 FROM {} WHERE {}").format(
             pgsql.Identifier(table.lower()), pgsql.SQL(" AND ").join(where_parts)),
         list(pk_vals.values()))
     exists = cur.fetchone() is not None
-
+    
+    # re-insert if it doesn't exist 
     if not exists:
         cols = list(reconstructed.keys())
         col_sql = pgsql.SQL(", ").join(pgsql.Identifier(c) for c in cols)

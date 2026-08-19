@@ -1,11 +1,10 @@
 """
-Turns a usable-FD list into:
+turns a FD list into:
   - a NetworkX DiGraph (nodes = columns, edges = "determines")
-  - column_rules: {col: (lhs_cols, avg_group_size)} for derivable columns
+  - column_rules: {col: (lhs_cols, avg_group_size)} 
   - a topological order for reconstruction
 
-Multiple FDs can determine the same RHS column (e.g. both c_zip->c_state and
-c_city->c_state existed in our test data). Pick one rule per column:
+Multiple FDs can determine the same RHS column. Pick one rule per column:
 the one with the highest avg_group_size.
 
 """
@@ -32,8 +31,8 @@ def build_dependency_graph(usable_fds):
         except nx.NetworkXNoCycle:
             break
         rhs_in_cycle = set(v for _u, v in cycle)
-        # drop whichever rule touching this cycle is weakest (lowest avg
-        # group size) -- keeps the strongest derivations, sheds the least
+        # drop whichever rule touching this cycle is weakest (lowest avg group size) 
+        # keeps the strongest derivations, sheds the least
         weakest_rhs = min(rhs_in_cycle, key=lambda n: best_rule[n][1] if n in best_rule else -1)
         if weakest_rhs in best_rule:
             lhs, _ags = best_rule[weakest_rhs]

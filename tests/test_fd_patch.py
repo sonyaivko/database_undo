@@ -1,3 +1,7 @@
+# testing undoing deletions:
+# - delete rows and reconstruct with UndoDeletion
+# compare every column of the reconstructed row against the original 
+
 import sys 
 import json
 import psycopg2

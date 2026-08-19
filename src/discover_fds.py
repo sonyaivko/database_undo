@@ -1,10 +1,9 @@
 """
-Runs Desbordante's HyFD on a CSV then filters the raw output down
-to FDs usable for reconstruction (see fd_filter.py) raw HyFD output is dominated by spurious FDs from
-near-unique columns).
+- Runs Desbordante's HyFD on a CSV 
+- raw HyFD output is dominated by spurious FDs from near-unique columns
 
-Usage: python3 discover_fds.py <csv_path> <pk_col1> [pk_col2 ...]
-Writes <csv_path_stem>_fds.json with the usable FD list.
+usage: python3 discover_fds.py <csv_path> <pk_col1> [pk_col2 ...]
+writes <csv_path>_fds.json with the FD list lhs -> rhs 
 """
 import sys
 import json
