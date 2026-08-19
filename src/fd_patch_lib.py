@@ -12,7 +12,7 @@ def get_predictor_columns(all_cols, pk_cols, rules):
     return [c for c in all_cols if c not in pk_cols and c not in rules]
 
 
-def _lookup_value(conn, table, lhs_cols, lhs_vals, rhs_col, exclude_pk=None, pk_cols=None):
+def _lookup_value(conn, table, lhs_cols, lhs_vals, rhs_col, exclude_pks=None, pk_cols=None):
     """Returns the single consistent rhs_col value among rows matching
     lhs_cols=lhs_vals, or None if there's no consistent single value."""
     where_parts = []
