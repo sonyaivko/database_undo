@@ -36,7 +36,7 @@ ax.plot(agg.batch_size, agg.fd_undo_time / agg.naive_undo_time, "v-", color="pur
 ax.axhline(1.0, color="gray", linestyle="--", linewidth=1, label="break-even")
 ax.set_xscale("log"); ax.set_yscale("log")
 ax.set_xlabel("batch size (rows deleted)"); ax.set_ylabel("ratio (FD-patch / naive)")
-ax.set_title("Relative cost: below 1.0 = FD-patch wins")
+ax.set_title("Relative cost")
 ax.legend(fontsize=8); ax.grid(alpha=0.3)
 
 # The key diagnostic panel: per-row cost, log vs undo. Flat = healthy scaling,
@@ -44,12 +44,12 @@ ax.legend(fontsize=8); ax.grid(alpha=0.3)
 # with batch size), not just "more rows take more time."
 ax = axes[1, 1]
 ax.plot(agg.batch_size, agg.fd_log_time / agg.batch_size * 1000, "o-", color="darkred",
-         label="log: ms/row (climbs -- exclude_pks scaling issue)")
+         label="log: ms/row ")
 ax.plot(agg.batch_size, agg.fd_undo_time / agg.batch_size * 1000, "v-", color="purple",
-         label="undo: ms/row (flat -- no such issue)")
+         label="undo: ms/row ")
 ax.set_xscale("log")
 ax.set_xlabel("batch size (rows deleted)"); ax.set_ylabel("per-row cost (ms)")
-ax.set_title("Per-row cost: log time scales badly, undo time doesn't")
+ax.set_title("Per-row cost")
 ax.legend(fontsize=8); ax.grid(alpha=0.3)
 
 plt.tight_layout()
