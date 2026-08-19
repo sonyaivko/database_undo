@@ -12,7 +12,7 @@ def get_predictor_columns(all_cols, pk_cols, rules):
     return [c for c in all_cols if c not in pk_cols and c not in rules]
 
 
-def _lookup_value(conn, table, lhs_cols, lhs_vals, rhs_col, exclude_pk=None):
+def _lookup_value(conn, table, lhs_cols, lhs_vals, rhs_col, exclude_pk=None, pk_cols=None):
     """Returns the single consistent rhs_col value among rows matching
     lhs_cols=lhs_vals, or None if there's no consistent single value."""
     where_parts = []
@@ -21,9 +21,12 @@ def _lookup_value(conn, table, lhs_cols, lhs_vals, rhs_col, exclude_pk=None):
         where_parts.append(pgsql.SQL("{} = %s").format(pgsql.Identifier(c)))
         params.append(v)
     if exclude_pk:
-        for c, v in exclude_pk.items():
-            where_parts.append(pgsql.SQL("{} != %s").format(pgsql.Identifier(c)))
-            params.append(v)
+        cols_sql = pgsql.SQL(", ").join(pgsql.Identifier(c) for c in pk_cols)
+        row_tuples = pgsql.SQL(", ").join(
+            pgsql.SQL("({})").format(pgsql.SQL(", ").join(pgsql.Literal(pk[c]) for c in pk_cols))
+            for pk in exclude_pks
+        )
+        where_parts.append(pgsql.SQL("({}) NOT IN ({})").format(cols_sql, row_tuples))
     if not where_parts:
         where_parts = [pgsql.SQL("TRUE")]  # constant column (empty LHS) -- no filter needed
     where = pgsql.SQL(" AND ").join(where_parts)
@@ -38,7 +41,7 @@ def _lookup_value(conn, table, lhs_cols, lhs_vals, rhs_col, exclude_pk=None):
     return None  # 0 matches 
 
 
-def log_deletion(conn, table, row, pk_cols, rules):
+def log_deletion(conn, table, row, pk_cols, rules, batch_pks = None):
     """row: dict of the full deleted row's values, captured before the
     physical DELETE (or from a trigger's OLD record)."""
     all_cols = list(row.keys())
@@ -46,10 +49,11 @@ def log_deletion(conn, table, row, pk_cols, rules):
     predictors = {c: row[c] for c in predictor_cols}
 
     pk_vals = {c: row[c] for c in pk_cols}
+    exclude_pks = batch_pks if batch_pks is not None else [pk_vals]
     fd_patch = {}
     for col, (lhs, _ags) in rules.items():
         lhs_vals = [row[l] for l in lhs]
-        expected = _lookup_value(conn, table, lhs, lhs_vals, col, exclude_pk=pk_vals)
+        expected = _lookup_value(conn, table, lhs, lhs_vals, col, exclude_pk=pk_vals, pk_cols = pk_cols)
         if expected is None or expected != row[col]:
             fd_patch[col] = row[col]
 
