@@ -20,7 +20,7 @@ def _lookup_value(conn, table, lhs_cols, lhs_vals, rhs_col, exclude_pks=None, pk
     for c, v in zip(lhs_cols, lhs_vals):
         where_parts.append(pgsql.SQL("{} = %s").format(pgsql.Identifier(c)))
         params.append(v)
-    if exclude_pk:
+    if exclude_pks:
         cols_sql = pgsql.SQL(", ").join(pgsql.Identifier(c) for c in pk_cols)
         row_tuples = pgsql.SQL(", ").join(
             pgsql.SQL("({})").format(pgsql.SQL(", ").join(pgsql.Literal(pk[c]) for c in pk_cols))
@@ -53,7 +53,7 @@ def log_deletion(conn, table, row, pk_cols, rules, batch_pks = None):
     fd_patch = {}
     for col, (lhs, _ags) in rules.items():
         lhs_vals = [row[l] for l in lhs]
-        expected = _lookup_value(conn, table, lhs, lhs_vals, col, exclude_pk=pk_vals, pk_cols = pk_cols)
+        expected = _lookup_value(conn, table, lhs, lhs_vals, col, exclude_pks=exclude_pks, pk_cols = pk_cols)
         if expected is None or expected != row[col]:
             fd_patch[col] = row[col]
 
