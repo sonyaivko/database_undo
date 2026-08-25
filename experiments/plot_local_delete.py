@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-mpl.rcParams["font.family"] = "Liberation Serif"
+mpl.rcParams["font.family"] = "serif"
 
 COLOR_FD = "#1D3557"       
 COLOR_NAIVE = "#E63946"   

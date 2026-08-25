@@ -1,5 +1,6 @@
 """
-store the entire row, undo by direct re-INSERT
+Naive baseline for undoing DELETEs: store the entire row, undo by direct
+re-INSERT. 
 """
 import json
 from psycopg2 import sql as pgsql
@@ -22,5 +23,20 @@ def naive_undo_deletion(conn, table, row):
         pgsql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
             pgsql.Identifier(table.lower()), col_sql, placeholders),
         [row[c] for c in cols])
+    conn.commit()
+    cur.close()
+
+
+def naive_undo_deletion_batch(conn, table, rows):
+    """commits oncd for the whole batch instead of once per row. """
+    cur = conn.cursor()
+    for row in rows:
+        cols = list(row.keys())
+        col_sql = pgsql.SQL(", ").join(pgsql.Identifier(c) for c in cols)
+        placeholders = pgsql.SQL(", ").join(pgsql.Placeholder() for _ in cols)
+        cur.execute(
+            pgsql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
+                pgsql.Identifier(table.lower()), col_sql, placeholders),
+            [row[c] for c in cols])
     conn.commit()
     cur.close()

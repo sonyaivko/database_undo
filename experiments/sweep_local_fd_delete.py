@@ -15,7 +15,7 @@ from psycopg2.extras import RealDictCursor
 
 from local_fd_discovery import discover_rules
 from local_fd_patch_lib import topological_order, log_batch_deletion, undo_batch_deletion
-from naive_delete_lib import naive_log_deletion, naive_storage_bytes, naive_undo_deletion
+from naive_delete_lib import naive_log_deletion, naive_storage_bytes, naive_undo_deletion_batch
 
 CONN_PARAMS = dict(host="localhost", port=5432, dbname="undo_test",
                     user="undo_user", password="undo_pass")
@@ -94,8 +94,7 @@ def run_trial(conn, table, pk_cols, offset, batch_size):
     cur.close()
 
     t0 = time.perf_counter()
-    for row in naive_logged:
-        naive_undo_deletion(conn, table, row)
+    naive_undo_deletion_batch(conn, table, naive_logged)
     naive_undo_time = time.perf_counter() - t0
 
     n_ruled = len(rules)
