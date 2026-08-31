@@ -44,7 +44,7 @@ ax.legend(); ax.grid(alpha=0.3)
 
 # Panel 2: runtime breakdown 
 ax = axes[0, 1]
-ax.plot(agg.batch_size, agg.combined_log_time * 1000, "o-", color=COLOR_LOG, label="log (discovery + per-row logging)")
+ax.plot(agg.batch_size, agg.combined_log_time * 1000, "o-", color=COLOR_LOG, label="log")
 ax.plot(agg.batch_size, agg.undo_time * 1000, "o-", color=COLOR_UNDO, label="undo")
 ax.plot(agg.batch_size, agg.naive_undo_time * 1000, "s--", color=COLOR_NAIVE, alpha=0.7, label="naive undo ")
 ax.plot(agg.batch_size, agg.plain_delete_time * 1000, "s:", color=COLOR_BASELINE,
@@ -52,7 +52,7 @@ ax.plot(agg.batch_size, agg.plain_delete_time * 1000, "s:", color=COLOR_BASELINE
 ax.set_ylim(bottom=0)
 ax.set_xlabel("batch size"); ax.set_ylabel("time (ms)")
 ax.set_title("Runtime analysis")
-ax.legend(fontsize=8); ax.grid(alpha=0.3)
+ax.legend(fontsize=12); ax.grid(alpha=0.3)
 
 # Panel 3: compression trend
 ax = axes[1, 0]
@@ -74,17 +74,16 @@ legend_handles = [
     mpatches.Patch(color=COLOR_LIKELY_REAL, label="likely real"),
     mpatches.Patch(color=COLOR_LIKELY_NOISE, label="probable noise"),
 ]
-ax.legend(handles=legend_handles, fontsize=9)
-ax.grid(alpha=0.3, axis="y")
+ax.legend(handles=legend_handles, fontsize=12)
+ax.grid(alpha=0.3, axis="y", labelsize=10)
  
 total_all = rules["bytes_saved"].sum()
 total_real = rules.loc[rules["likely_real"], "bytes_saved"].sum()
 gap = total_all - total_real
 pct_real = 100 * total_real / total_all if total_all else 0
 ax.text(0.98, 0.85,
-        f"Total: {total_all:,} bytes\nLikely real: {total_real:,} ({pct_real:.0f}%)\n"
-        f"Uncertain: {gap:,} ({100-pct_real:.0f}%)",
-        transform=ax.transAxes, ha="right", va="top", fontsize=8,
+        f"Total: {total_all:,} ",
+        transform=ax.transAxes, ha="right", va="top", fontsize=10,
         bbox=dict(boxstyle="round", facecolor="white", edgecolor="0.7"))
  
 plt.tight_layout()
