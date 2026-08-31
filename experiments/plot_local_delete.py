@@ -75,7 +75,7 @@ legend_handles = [
     mpatches.Patch(color=COLOR_LIKELY_NOISE, label="probable noise"),
 ]
 ax.legend(handles=legend_handles, fontsize=12)
-ax.grid(alpha=0.3, axis="y", labelsize=10)
+ax.grid(alpha=0.3, axis="y")
  
 total_all = rules["bytes_saved"].sum()
 total_real = rules.loc[rules["likely_real"], "bytes_saved"].sum()
