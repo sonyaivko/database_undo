@@ -48,6 +48,17 @@ def fd_bytes_for_batch(rows, pk_cols, rules):
     predictor_bytes = sum(len(json.dumps(row[c], default=str)) for row in rows for c in predictor_cols)
     return patch_bytes + mapping_bytes + predictor_bytes
 
+def delete_batch(conn, table, pk_cols, pk_tuples):
+    """Plain DELETE timed separately as a baseline cost """
+    cur = conn.cursor()
+    t0 = time.perf_counter()
+    for pk in pk_tuples:
+        where = " AND ".join(f"{c}=%s" for c in pk_cols)
+        cur.execute(f"DELETE FROM {table} WHERE {where}", pk)
+    conn.commit()
+    dt = time.perf_counter() - t0
+    cur.close()
+    return dt
 
 def run_trial(conn, table, pk_cols, offset, batch_size):
     rows = fetch_batch(conn, table, pk_cols, offset, batch_size)
@@ -68,12 +79,7 @@ def run_trial(conn, table, pk_cols, offset, batch_size):
 
     fd_bytes = fd_bytes_for_batch(rows, pk_cols, rules)
 
-    cur = conn.cursor()
-    for pk in pk_tuples:
-        where = " AND ".join(f"{c}=%s" for c in pk_cols)
-        cur.execute(f"DELETE FROM {table} WHERE {where}", pk)
-    conn.commit()
-    cur.close()
+    plain_delete_time_1 = delete_batch(conn, table, pk_cols, pk_tuples)
 
     topo = topological_order(rules)
     t0 = time.perf_counter()
@@ -86,12 +92,7 @@ def run_trial(conn, table, pk_cols, offset, batch_size):
     naive_log_time = time.perf_counter() - t0
     naive_bytes = naive_storage_bytes(naive_logged)
 
-    cur = conn.cursor()
-    for pk in pk_tuples:
-        where = " AND ".join(f"{c}=%s" for c in pk_cols)
-        cur.execute(f"DELETE FROM {table} WHERE {where}", pk)
-    conn.commit()
-    cur.close()
+    plain_delete_time_2 = delete_batch(conn, table, pk_cols, pk_tuples)
 
     t0 = time.perf_counter()
     naive_undo_deletion_batch(conn, table, naive_logged)
@@ -105,6 +106,7 @@ def run_trial(conn, table, pk_cols, offset, batch_size):
         batch_size=batch_size,
         discovery_time=discovery_time, log_time=log_time, undo_time=undo_time,
         naive_log_time=naive_log_time, naive_undo_time=naive_undo_time,
+        plain_delete_time=(plain_delete_time_1 + plain_delete_time_2) / 2,
         fd_bytes=fd_bytes, naive_bytes=naive_bytes,
         n_ruled_cols=n_ruled, n_predictor_cols=n_predictors, n_likely_real=n_likely_real,
     )

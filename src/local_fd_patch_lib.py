@@ -69,9 +69,7 @@ def undo_row(pk_vals, predictors, patches, rules, topo_order):
         if value is None:
             raise ValueError(
                 f"Cannot reconstruct column '{col}' for {pk_vals}: no mapping entry for "
-                f"key {key}. This indicates the mapping is stale relative to what's being "
-                f"reconstructed -- shouldn't happen if deleted_log/fd_patch came from the "
-                f"same discover_rules() call being used here."
+                f"key {key}. "
             )
         reconstructed[col] = value
 
@@ -87,14 +85,6 @@ def undo_batch_deletion(conn, table, pk_cols, deleted_log, fd_patch, rules, topo
         pk_vals = dict(zip(pk_cols, pk))
         patches = fd_patch.get(pk, {})
         reconstructed = undo_row(pk_vals, predictors, patches, rules, topo_order)
-
-        where_parts = [pgsql.SQL("{} = %s").format(pgsql.Identifier(c)) for c in pk_cols]
-        cur.execute(
-            pgsql.SQL("SELECT 1 FROM {} WHERE {}").format(
-                pgsql.Identifier(table.lower()), pgsql.SQL(" AND ").join(where_parts)),
-            list(pk))
-        if cur.fetchone() is not None:
-            continue  # already exists, skip
 
         cols = list(reconstructed.keys())
         col_sql = pgsql.SQL(", ").join(pgsql.Identifier(c) for c in cols)
