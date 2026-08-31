@@ -130,12 +130,12 @@ if __name__ == "__main__":
             print(f"batch={batch_size:5d} trial={trial}  "
                   f"storage ratio={r['fd_bytes']/r['naive_bytes']:.3f}x  "
                   f"discovery={r['discovery_time']*1000:.1f}ms log={r['log_time']*1000:.2f}ms "
-                  f"undo={r['undo_time']*1000:.2f}ms  "
+                  f"undo={r['undo_time']*1000:.2f}ms  plain_delete={r['plain_delete_time']*1000:.2f}ms  "
                   f"ruled={r['n_ruled_cols']} (likely_real={r['n_likely_real']}) predictors={r['n_predictor_cols']}")
             offset += batch_size
     conn.close()
 
-    out_csv = "local_fd_sweep_results.csv"
+    out_csv = f"local_fd_sweep_results_{table}.csv"
     with open(out_csv, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=list(results[0].keys()))
         writer.writeheader()
