@@ -24,6 +24,7 @@ sweep = pd.read_csv(f"local_fd_sweep_results_{dataset}.csv")
 agg = sweep.groupby("batch_size").agg(
     discovery_time=("discovery_time", "mean"), log_time=("log_time", "mean"),
     undo_time=("undo_time", "mean"), naive_undo_time=("naive_undo_time", "mean"),
+    plain_delete_time=("plain_delete_time", "mean"),
     fd_bytes=("fd_bytes", "mean"), naive_bytes=("naive_bytes", "mean"),
 ).reset_index()
 
