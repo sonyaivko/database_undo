@@ -33,6 +33,7 @@ ax.plot(agg.batch_size, agg.box_log_time * 1000, "o-", color="#2A9D8F", linewidt
 ax.plot(agg.batch_size, agg.box_undo_time * 1000, "o--", color="#2A9D8F", alpha=0.6, linewidth=2, markersize=8, label="box: undo")
 ax.plot(agg.batch_size, agg.naive_log_time * 1000, "s-", color="#E76F51", linewidth=2, markersize=8, label="naive: log")
 ax.plot(agg.batch_size, agg.naive_undo_time * 1000, "s--", color="#E76F51", alpha=0.6, linewidth=2, markersize=8, label="naive: undo")
+ax.plot(agg.batch_size, agg.plain_insert_time * 1000, "^:", color="#6C757D", linewidth=2, markersize=8, label="plain INSERT")
 ax.set_ylim(bottom=0)
 ax.set_xlabel("batch size", fontsize=15)
 ax.set_ylabel("time (ms)", fontsize=15)

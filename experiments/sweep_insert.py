@@ -49,13 +49,16 @@ def setup_district(conn, old_data_max_id):
     cur.close()
  
  
-def insert_rows(conn, rows):
+def timed_insert_rows(conn, rows):
     cur = conn.cursor()
     cols = list(rows[0].keys())
+    t0 = time.perf_counter()
     execute_values(cur, f"INSERT INTO CUSTOMER ({','.join(cols)}) VALUES %s",
                     [[r[c] for c in cols] for r in rows], page_size=500)
     conn.commit()
+    dt = time.perf_counter() - t0
     cur.close()
+    return dt 
  
  
 def run_trial(conn, batch_size, slot_index, since_lo, since_hi):
@@ -83,7 +86,8 @@ def run_trial(conn, batch_size, slot_index, since_lo, since_hi):
     for row in batch:
         row["c_since"] = since_lo + datetime.timedelta(seconds=random.uniform(0, since_span))
  
-    insert_rows(conn, batch)
+    plain_insert_time_1 = timed_insert_rows(conn, batch)
+
  
     t0 = time.perf_counter()
     boxes, exceptions = log_insertion(conn, "customer", batch, PK_COLS)
@@ -100,7 +104,7 @@ def run_trial(conn, batch_size, slot_index, since_lo, since_hi):
         cur.execute("DELETE FROM customer WHERE c_w_id=%s AND c_d_id=%s AND c_id=%s", (W_ID, D_ID, cid))
         cur.close()
     conn.commit()
-    insert_rows(conn, batch)
+    plain_insert_time_2 = timed_insert_rows(conn, batch)
  
     t0 = time.perf_counter()
     pk_list = naive_log_insertion(batch, PK_COLS)
@@ -117,6 +121,7 @@ def run_trial(conn, batch_size, slot_index, since_lo, since_hi):
         batch_size=batch_size, n_boxes=len(boxes), n_exceptions=len(exceptions),
         box_log_time=box_log_time, box_undo_time=box_undo_time, box_bytes=box_bytes,
         naive_log_time=naive_log_time, naive_undo_time=naive_undo_time, naive_bytes=naive_bytes,
+        plain_insert_time=(plain_insert_time_1 + plain_insert_time_2) / 2,
         correctness_ok=correctness_ok,
     )
  
