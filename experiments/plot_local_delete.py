@@ -42,7 +42,7 @@ rules = pd.read_csv(f"rule_bytes_saved_{dataset}.csv").sort_values("bytes_saved"
 
 fig, axes = plt.subplots(2, 2, figsize=(15, 11))
 
-# Panel 1: storage, LINEAR scale
+# Panel 1: storage,
 ax = axes[0, 0]
 ax.plot(agg.batch_size, agg.fd_bytes, "o-", color=COLOR_FD, linewidth=2, markersize=8, label="local FD-patch")
 ax.plot(agg.batch_size, agg.naive_bytes, "s-", color=COLOR_NAIVE, linewidth=2, markersize=8, label="naive")
