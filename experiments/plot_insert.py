@@ -12,6 +12,7 @@ agg = df.groupby("batch_size").agg(
     box_log_time=("box_log_time", "mean"), naive_log_time=("naive_log_time", "mean"),
     box_undo_time=("box_undo_time", "mean"), naive_undo_time=("naive_undo_time", "mean"),
     box_bytes=("box_bytes", "mean"), naive_bytes=("naive_bytes", "mean"),
+    plain_insert_time=("plain_insert_time", "mean"),
 ).reset_index()
  
  
