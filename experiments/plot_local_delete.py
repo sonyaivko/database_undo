@@ -62,7 +62,7 @@ ax.plot(agg.batch_size, agg.plain_delete_time * 1000, "s:", color=COLOR_BASELINE
          label="plain DELETE ")
 ax.set_ylim(bottom=0)
 ax.set_xlabel("batch size", fontsize=LABEL_SIZE); ax.set_ylabel("time (ms)", fontsize=LABEL_SIZE)
-ax.set_title("Runtime analysis", fontsize=TITLE_SIZW)
+ax.set_title("Runtime analysis", fontsize=TITLE_SIZE)
 ax.legend(fontsize=LEGEND_SIZE)
 ax.tick_params(labelsize=TICK_SIZE)
 ax.grid(alpha=0.3)
