@@ -11,6 +11,7 @@ agg = df.groupby("batch_size").agg(
 
 fig, axes = plt.subplots(2, 2, figsize=(13, 10))
 
+# graph 1: storage 
 ax = axes[0, 0]
 ax.plot(agg.batch_size, agg.fd_bytes, "o-", label="FD-patch")
 ax.plot(agg.batch_size, agg.naive_bytes, "s-", label="naive (full row image)")
@@ -19,6 +20,7 @@ ax.set_xlabel("batch size (rows deleted)"); ax.set_ylabel("log storage (bytes)")
 ax.set_title("Storage: FD-patch vs naive")
 ax.legend(); ax.grid(alpha=0.3)
 
+# graph 2: runtime 
 ax = axes[0, 1]
 ax.plot(agg.batch_size, agg.fd_log_time, "o-", color="C0", label="FD-patch: log")
 ax.plot(agg.batch_size, agg.fd_undo_time, "o--", color="C0", alpha=0.6, label="FD-patch: undo")
@@ -29,6 +31,7 @@ ax.set_xlabel("batch size (rows deleted)"); ax.set_ylabel("time (s)")
 ax.set_title("Runtime: FD-patch vs naive (log + undo)")
 ax.legend(fontsize=8); ax.grid(alpha=0.3)
 
+# graph 3: storage ratio fd patch / naive 
 ax = axes[1, 0]
 ax.plot(agg.batch_size, agg.fd_bytes / agg.naive_bytes, "o-", color="darkgreen", label="storage ratio")
 ax.plot(agg.batch_size, agg.fd_log_time / agg.naive_log_time, "^-", color="darkred", label="log time ratio")
@@ -39,9 +42,7 @@ ax.set_xlabel("batch size (rows deleted)"); ax.set_ylabel("ratio (FD-patch / nai
 ax.set_title("Relative cost")
 ax.legend(fontsize=8); ax.grid(alpha=0.3)
 
-# The key diagnostic panel: per-row cost, log vs undo. Flat = healthy scaling,
-# climbing = a real algorithmic problem (the exclude_pks NOT-IN clause growing
-# with batch size), not just "more rows take more time."
+# graph 4: per row cost 
 ax = axes[1, 1]
 ax.plot(agg.batch_size, agg.fd_log_time / agg.batch_size * 1000, "o-", color="darkred",
          label="log: ms/row ")

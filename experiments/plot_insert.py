@@ -5,7 +5,7 @@ import matplotlib as mpl
 mpl.rcParams["font.family"] = "serif"
 mpl.rcParams["font.size"] = 13
  
-# graphs 1-3: forced single-split sweep
+# graphs 1-3: single-split sweep
 df = pd.read_csv("insert_sweep_results.csv")
 df = df[df.correctness_ok]
 agg = df.groupby("batch_size").agg(
@@ -18,7 +18,7 @@ agg = df.groupby("batch_size").agg(
  
 fig, axes = plt.subplots(2, 2, figsize=(15, 11))
  
-# graph 1: storage, forced single split
+# graph 1: storage, single split
 ax = axes[0, 0]
 ax.plot(agg.batch_size, agg.box_bytes, "o-", color="#1D3557", linewidth=2, markersize=8, label="box (1 split)")
 ax.plot(agg.batch_size, agg.naive_bytes, "s-", color="#E63946", linewidth=2, markersize=8, label="naive")
@@ -28,7 +28,7 @@ ax.set_title("Storage: bounding box vs naive", fontsize=16)
 ax.legend(fontsize=12); ax.tick_params(labelsize=12)
 ax.grid(alpha=0.3)
  
-# graph 2: runtime, forced single split
+# graph 2: runtime, single split
 ax = axes[0, 1]
 ax.plot(agg.batch_size, agg.box_log_time * 1000, "o-", color="#2A9D8F", linewidth=2, markersize=8, label="box: log")
 ax.plot(agg.batch_size, agg.box_undo_time * 1000, "o--", color="#2A9D8F", alpha=0.6, linewidth=2, markersize=8, label="box: undo")
@@ -42,12 +42,7 @@ ax.set_title("Runtime analysis", fontsize=16)
 ax.legend(fontsize=11); ax.tick_params(labelsize=12)
 ax.grid(alpha=0.3)
  
-# Panel 3: visualization of the box structure itself -- illustrative,
-# using clean/legible numbers (matching the earlier Scenario A test) rather
-# than this sweep's actual numbers, which span millions of c_id units
-# (necessary for correctness -- fresh territory must sit far from old
-# data) and would render as two invisible dots with an empty gap between,
-# not a useful diagram.
+# graph 4: visualization
 import matplotlib.patches as mpatches
  
 ax = axes[1, 0]
@@ -81,11 +76,11 @@ ax.legend(loc="upper right", fontsize=11)
 ax.tick_params(labelsize=12)
 ax.grid(alpha=0.2, axis="x")
  
-# Panel 4: storage ratio vs LEAF SIZE directly 
+# graph 4: storage ratio vs LEAF SIZE  
 leaf = pd.read_csv("leaf_size_sweep.csv")
 leaf = leaf[leaf.n_boxes == 1]  
 leaf["ratio"] = leaf.box_bytes / leaf.naive_bytes
-BREAK_EVEN_SIZE = 27.5  # empirical crossing, interpolated from this exact data
+BREAK_EVEN_SIZE = 27.5  
  
 ax = axes[1, 1]
 ax.plot(leaf["size"], leaf.ratio, "o-", color="#1D3557", linewidth=2, markersize=8)

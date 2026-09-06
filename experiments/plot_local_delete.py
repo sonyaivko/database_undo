@@ -42,7 +42,7 @@ rules = pd.read_csv(f"rule_bytes_saved_{dataset}.csv").sort_values("bytes_saved"
 
 fig, axes = plt.subplots(2, 2, figsize=(15, 11))
 
-# Panel 1: storage,
+# graph 1: storage,
 ax = axes[0, 0]
 ax.plot(agg.batch_size, agg.fd_bytes, "o-", color=COLOR_FD, linewidth=2, markersize=8, label="local FD-patch")
 ax.plot(agg.batch_size, agg.naive_bytes, "s-", color=COLOR_NAIVE, linewidth=2, markersize=8, label="naive")
@@ -53,7 +53,7 @@ ax.tick_params(labelsize=TICK_SIZE)
 ax.grid(alpha=0.3)
 
 
-# Panel 2: runtime breakdown 
+# graph 2: runtime breakdown 
 ax = axes[0, 1]
 ax.plot(agg.batch_size, agg.combined_log_time * 1000, "o-", color=COLOR_LOG, linewidth=2, markersize=8, label="log")
 ax.plot(agg.batch_size, agg.undo_time * 1000, "o-", color=COLOR_UNDO, linewidth=2, markersize=8, label="undo")
@@ -68,7 +68,7 @@ ax.tick_params(labelsize=TICK_SIZE)
 ax.grid(alpha=0.3)
 
 
-# Panel 3: compression trend
+# graph 3: compression ratio fd / naive trend
 ax = axes[1, 0]
 ax.plot(agg.batch_size, agg.fd_bytes / agg.naive_bytes, "o-", color=COLOR_TREND, linewidth=2, markersize=8)
 ax.set_xscale("log")
@@ -77,7 +77,7 @@ ax.set_title("Storage compression trend (FD-patch / naive)", fontsize=TITLE_SIZE
 ax.tick_params(labelsize=TICK_SIZE)
 ax.grid(alpha=0.3)
 
-# Panel 4: bytes saved per rule, ranked
+# graph 4: bytes saved per rule, ranked
 ax = axes[1, 1]
 bar_colors = [COLOR_LIKELY_REAL if r else COLOR_LIKELY_NOISE for r in rules["likely_real"]]
 
