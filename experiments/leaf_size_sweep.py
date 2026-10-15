@@ -6,16 +6,23 @@ Usage: python3 leaf_size_sweep.py
 """
 import csv
 import json
+import pathlib
 import psycopg2
 from psycopg2.extras import execute_values
 
-from undo_lib import log_insertion, undo_insertion
-from naive_lib import naive_log_insertion, naive_storage_bytes
-from tpcc_rows import make_customer_row
+from database_undo import (
+    log_insertion,
+    undo_insertion,
+    naive_log_insertion,
+    naive_insert_storage_bytes,
+    make_customer_row,
+    CONN_PARAMS,
+)
 
-CONN_PARAMS = dict(host="localhost", port=5432, dbname="undo_test",
-                    user="undo_user", password="undo_pass")
-PK_COLS = ["c_w_id", "c_d_id", "c_id"]
+RESULTS = pathlib.Path(__file__).resolve().parent.parent / "results"
+RESULTS.mkdir(exist_ok=True)
+
+K_COLS = ["c_w_id", "c_d_id", "c_id"]
 W_ID, D_ID = 1, 50
 SIZES = [5, 10, 15, 20, 23, 25, 30, 40, 50, 75, 100]
 
@@ -54,7 +61,7 @@ if __name__ == "__main__":
 
         boxes, exceptions = log_insertion(conn, "customer", rows, PK_COLS)
         box_bytes = len(json.dumps(boxes, default=str))
-        naive_bytes = naive_storage_bytes(naive_log_insertion(rows, PK_COLS))
+        naive_bytes = naive_insert_storage_bytes(naive_log_insertion(rows, PK_COLS))
         undo_insertion(conn, "customer", boxes, exceptions, PK_COLS)
 
         ratio = box_bytes / naive_bytes if len(boxes) == 1 else None
@@ -67,8 +74,8 @@ if __name__ == "__main__":
 
     conn.close()
 
-    with open("leaf_size_sweep.csv", "w", newline="") as f:
+    with open(RESULTS / "leaf_size_sweep.csv", "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=list(results[0].keys()))
         writer.writeheader()
         writer.writerows(results)
-    print("\nWrote leaf_size_sweep.csv")
+    print(f"\nWrote {RESULTS / 'leaf_size_sweep.csv'}")

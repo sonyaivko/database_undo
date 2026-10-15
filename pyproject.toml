@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "database-undo"
+version = "0.1.0"
+description = "Storage-efficient undo for SQL INSERT and DELETE batches"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Sonya Ivkovic" }]
+dependencies = [
+  "psycopg2-binary>=2.9",
+  "networkx>=3.0",
+]
+
+[project.optional-dependencies]
+# Global FD discovery only. The per-batch discovery in
+# database_undo.local_fd_discovery needs nothing beyond the standard library.
+discovery = ["desbordante>=2.2"]
+# Needed only by the experiments/plot_*.py scripts.
+plots = ["pandas>=2.0", "matplotlib>=3.7"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+dbundo-discover-fds = "database_undo.discover_fds:main"
+dbundo-load-tpcc = "database_undo.tpcc_gen:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

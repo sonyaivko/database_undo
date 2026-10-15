@@ -1,16 +1,21 @@
-# testing undoing deletions:
-# - delete rows and reconstruct with UndoDeletion
-# compare every column of the reconstructed row against the original 
+"""
+testing undoing deletions:
+- delete rows and reconstruct with UndoDeletion
+compare every column of the reconstructed row against the original 
+
+"""
 
 import sys 
 import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from fd_graph import build_dependency_graph
-from fd_patch_lib import log_deletion, undo_deletion
 
-CONN_PARAMS = dict(host="localhost", port=5432, dbname="undo_test",
-                    user="undo_user", password="undo_pass")
+from database_undo import (
+    build_dependency_graph,
+    log_deletion,
+    undo_deletion,
+    CONN_PARAMS,
+)
 
 if __name__ == "__main__":
     args = sys.argv[1:]

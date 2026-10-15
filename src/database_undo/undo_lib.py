@@ -126,7 +126,8 @@ def max_gap_split(rows, varying_cols):
     return best[1], best[2]
 
 
-def find_partitions(conn, table, rows, pk_cols, boxes, exception_ids):
+def find_partitions(conn, table, rows, pk_cols, boxes, exception_ids,
+                    split_fn=max_gap_split):
     if not rows:
         return
     cols = list(rows[0].keys())
@@ -139,17 +140,17 @@ def find_partitions(conn, table, rows, pk_cols, boxes, exception_ids):
     if count_in_box(conn, table, box) == len(rows):
         boxes.append(box)
         return
-    dim, val = max_gap_split(rows, cheap)
+    dim, val = split_fn(rows, cheap)
     if dim is None:
         exception_ids.extend(pk_tuple(r, pk_cols) for r in rows)
         return
     left = [r for r in rows if r[dim] <= val]
     right = [r for r in rows if r[dim] > val]
-    find_partitions(conn, table, left, pk_cols, boxes, exception_ids)
-    find_partitions(conn, table, right, pk_cols, boxes, exception_ids)
+    find_partitions(conn, table, left, pk_cols, boxes, exception_ids, split_fn)
+    find_partitions(conn, table, right, pk_cols, boxes, exception_ids, split_fn)
 
 
-def log_insertion(conn, table, batch_rows, pk_cols):
+def log_insertion(conn, table, batch_rows, pk_cols, split_fn=max_gap_split):
     boxes, exception_ids = [], []
     cols = list(batch_rows[0].keys())
     cheap, constant, _expensive = compute_dims(batch_rows, cols)
@@ -166,7 +167,7 @@ def log_insertion(conn, table, batch_rows, pk_cols):
         boxes.append(box)
         return boxes, exception_ids
     
-    dim, val = max_gap_split(batch_rows, cheap)
+    dim, val = split_fn(batch_rows, cheap)
     # no gap exists (low=high everywhere)
     if dim is None:
         exception_ids.extend(pk_tuple(r, pk_cols) for r in batch_rows)
@@ -187,8 +188,8 @@ def log_insertion(conn, table, batch_rows, pk_cols):
         return boxes, exception_ids
 
     # recursive calls
-    find_partitions(conn, table, left, pk_cols, boxes, exception_ids)
-    find_partitions(conn, table, right, pk_cols, boxes, exception_ids)
+    find_partitions(conn, table, left, pk_cols, boxes, exception_ids, split_fn)
+    find_partitions(conn, table, right, pk_cols, boxes, exception_ids, split_fn)
     return boxes, exception_ids
 
 
