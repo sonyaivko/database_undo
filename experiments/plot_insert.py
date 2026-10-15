@@ -1,12 +1,16 @@
 import pandas as pd
+import pathlib
 import matplotlib.pyplot as plt
 import matplotlib as mpl
- 
+
+RESULTS = pathlib.Path(__file__).resolve().parent.parent / "results"
+RESULTS.mkdir(exist_ok=True)
+
 mpl.rcParams["font.family"] = "serif"
 mpl.rcParams["font.size"] = 13
  
 # graphs 1-3: single-split sweep
-df = pd.read_csv("insert_sweep_results.csv")
+df = pd.read_csv(RESULTS / "insert_sweep_results.csv")
 df = df[df.correctness_ok]
 agg = df.groupby("batch_size").agg(
     box_log_time=("box_log_time", "mean"), naive_log_time=("naive_log_time", "mean"),
@@ -77,7 +81,7 @@ ax.tick_params(labelsize=12)
 ax.grid(alpha=0.2, axis="x")
  
 # graph 4: storage ratio vs LEAF SIZE  
-leaf = pd.read_csv("leaf_size_sweep.csv")
+leaf = pd.read_csv(RESULTS / "leaf_size_sweep.csv")
 leaf = leaf[leaf.n_boxes == 1]  
 leaf["ratio"] = leaf.box_bytes / leaf.naive_bytes
 BREAK_EVEN_SIZE = 27.5  
@@ -94,5 +98,5 @@ ax.legend(fontsize=11); ax.tick_params(labelsize=12)
 ax.grid(alpha=0.3)
  
 plt.tight_layout()
-plt.savefig("insert_sweep_plot.png", dpi=150)
-print("saved insert_sweep_plot.png")
+plt.savefig(RESULTS / "insert_sweep_plot.png", dpi=150)
+print(f"saved {RESULTS / 'insert_sweep_plot.png'}")

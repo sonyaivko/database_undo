@@ -5,11 +5,12 @@ Example (NCVoter): python3 inspect_rules.py ncvoter 1000 ncid
 import sys
 import csv
 import psycopg2
+import pathlib
 from psycopg2.extras import RealDictCursor
-from local_fd_discovery import discover_rules
+from database_undo import discover_rules, CONN_PARAMS
 
-CONN_PARAMS = dict(host="localhost", port=5432, dbname="undo_test",
-                    user="undo_user", password="undo_pass")
+RESULTS = pathlib.Path(__file__).resolve().parent.parent / "results"
+RESULTS.mkdir(exist_ok=True)
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
@@ -29,7 +30,7 @@ if __name__ == "__main__":
     rules = discover_rules(batch, pk_cols)
     ranked = sorted(rules.items(), key=lambda x: -x[1]["bytes_saved"])
 
-    out_csv = "rule_bytes_saved.csv"
+    out_csv = RESULTS / f"rule_bytes_saved_{table}.csv"
     with open(out_csv, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["rank", "target_column", "source_columns", "bytes_saved",

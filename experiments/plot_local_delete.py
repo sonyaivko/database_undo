@@ -1,8 +1,19 @@
+"""
+Plots the per-batch FD delete sweep for one dataset.
+
+Usage: python3 plot_local_delete.py <dataset>
+Example (NCVoter): python3 plot_local_delete.py ncvoter
+"""
+
 import sys 
 import pandas as pd
+import pathlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib as mpl
+
+RESULTS = pathlib.Path(__file__).resolve().parent.parent / "results"
+RESULTS.mkdir(exist_ok=True)
 
 mpl.rcParams["font.family"] = "serif"
 
@@ -28,7 +39,7 @@ if len(sys.argv) < 2:
     sys.exit(1)
 dataset = sys.argv[1]
 
-sweep = pd.read_csv(f"local_fd_sweep_results_{dataset}.csv")
+sweep = pd.read_csv(RESULTS / f"local_fd_sweep_results_{dataset}.csv")
 agg = sweep.groupby("batch_size").agg(
     discovery_time=("discovery_time", "mean"), log_time=("log_time", "mean"),
     undo_time=("undo_time", "mean"), naive_undo_time=("naive_undo_time", "mean"),
@@ -38,7 +49,7 @@ agg = sweep.groupby("batch_size").agg(
 
 agg["combined_log_time"] = agg.discovery_time + agg.log_time
 
-rules = pd.read_csv(f"rule_bytes_saved_{dataset}.csv").sort_values("bytes_saved", ascending=False)
+rules = pd.read_csv(RESULTS / f"rule_bytes_saved_{dataset}.csv").sort_values("bytes_saved", ascending=False)
 
 fig, axes = plt.subplots(2, 2, figsize=(15, 11))
 
@@ -104,6 +115,5 @@ ax.text(0.98, 0.85,
         bbox=dict(boxstyle="round", facecolor="white", edgecolor="0.7"))
  
 plt.tight_layout()
-plt.savefig(f"local_fd_sweep_plot_{dataset}.png", dpi=150)
-print(f"saved local_fd_sweep_plot_{dataset}.png")
- 
+plt.savefig(RESULTS / f"local_fd_sweep_plot_{dataset}.png", dpi=150)
+print(f"saved {RESULTS / f'local_fd_sweep_plot_{dataset}.png'}")

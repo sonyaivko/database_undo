@@ -10,15 +10,22 @@ import sys
 import csv
 import json
 import time
+import pathlib 
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-from fd_graph import build_dependency_graph
-from fd_patch_lib import log_deletion, undo_deletion
-from naive_delete_lib import naive_log_deletion, naive_storage_bytes, naive_undo_deletion
+from database_undo import (
+    build_dependency_graph,
+    log_deletion,
+    undo_deletion,
+    naive_log_deletion,
+    naive_delete_storage_bytes,
+    naive_undo_deletion,
+    CONN_PARAMS,
+)
 
-CONN_PARAMS = dict(host="localhost", port=5432, dbname="undo_test",
-                    user="undo_user", password="undo_pass")
+RESULTS = pathlib.Path(__file__).resolve().parent.parent / "results"
+RESULTS.mkdir(exist_ok=True)
 
 BATCH_SIZES = [5, 10, 25, 50, 100, 250, 500, 1000]
 TRIALS_PER_SIZE = 3
@@ -48,7 +55,7 @@ def run_trial(conn, table, pk_cols, rules, topo_order, offset, batch_size):
         predictors, fd_patch = log_deletion(conn, table, row, pk_cols, rules, batch_pks=pk_dicts)
         fd_logged.append((predictors, fd_patch))
     fd_log_time = time.perf_counter() - t0
-    fd_bytes = sum(naive_storage_bytes([p]) + naive_storage_bytes([f]) for p, f in fd_logged)
+    fd_bytes = sum(naive_delete_storage_bytes([p]) + naive_delete_storage_bytes([f]) for p, f in fd_logged)
 
     cur = conn.cursor()
     for pk in pk_dicts:
@@ -66,7 +73,7 @@ def run_trial(conn, table, pk_cols, rules, topo_order, offset, batch_size):
     t0 = time.perf_counter()
     naive_logged = [naive_log_deletion(row) for row in rows]
     naive_log_time = time.perf_counter() - t0
-    naive_bytes = naive_storage_bytes(naive_logged)
+    naive_bytes = naive_delete_storage_bytes(naive_logged)
 
     cur = conn.cursor()
     for pk in pk_dicts:
@@ -116,7 +123,7 @@ if __name__ == "__main__":
             offset += batch_size
     conn.close()
 
-    out_csv = "delete_sweep_results.csv"
+    out_csv = RESULTS / "delete_sweep_results.csv"
     with open(out_csv, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=list(results[0].keys()))
         writer.writeheader()

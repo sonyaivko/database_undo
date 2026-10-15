@@ -1,7 +1,10 @@
 import pandas as pd
+import pathlib
 import matplotlib.pyplot as plt
+RESULTS = pathlib.Path(__file__).resolve().parent.parent / "results"
+RESULTS.mkdir(exist_ok=True)
 
-df = pd.read_csv("delete_sweep_results.csv")
+df = pd.read_csv(RESULTS / "delete_sweep_results.csv")
 agg = df.groupby("batch_size").agg(
     fd_log_time=("fd_log_time", "mean"), fd_undo_time=("fd_undo_time", "mean"),
     fd_bytes=("fd_bytes", "mean"),
@@ -54,5 +57,5 @@ ax.set_title("Per-row cost")
 ax.legend(fontsize=8); ax.grid(alpha=0.3)
 
 plt.tight_layout()
-plt.savefig("delete_sweep_plot.png", dpi=150)
-print("saved delete_sweep_plot.png")
+plt.savefig(RESULTS / "delete_sweep_plot.png", dpi=150)
+print(f"saved {RESULTS / 'delete_sweep_plot.png'}")

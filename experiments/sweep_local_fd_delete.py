@@ -10,15 +10,23 @@ import sys
 import csv
 import json
 import time
+import pathlib
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-from local_fd_discovery import discover_rules
-from local_fd_patch_lib import topological_order, log_batch_deletion, undo_batch_deletion
-from naive_delete_lib import naive_log_deletion, naive_storage_bytes, naive_undo_deletion_batch
+from database_undo import (
+    discover_rules,
+    topological_order,
+    log_batch_deletion,
+    undo_batch_deletion,
+    naive_log_deletion,
+    naive_delete_storage_bytes,
+    naive_undo_deletion_batch,
+    CONN_PARAMS,
+)
 
-CONN_PARAMS = dict(host="localhost", port=5432, dbname="undo_test",
-                    user="undo_user", password="undo_pass")
+RESULTS = pathlib.Path(__file__).resolve().parent.parent / "results"
+RESULTS.mkdir(exist_ok=True)
 
 BATCH_SIZES = [5, 10, 25, 50, 100, 250, 500, 1000]
 TRIALS_PER_SIZE = 3
@@ -90,7 +98,7 @@ def run_trial(conn, table, pk_cols, offset, batch_size):
     t0 = time.perf_counter()
     naive_logged = [naive_log_deletion(row) for row in rows]
     naive_log_time = time.perf_counter() - t0
-    naive_bytes = naive_storage_bytes(naive_logged)
+    naive_bytes = naive_delete_storage_bytes(naive_logged)
 
     plain_delete_time_2 = delete_batch(conn, table, pk_cols, pk_tuples)
 
@@ -135,7 +143,7 @@ if __name__ == "__main__":
             offset += batch_size
     conn.close()
 
-    out_csv = f"local_fd_sweep_results_{table}.csv"
+    out_csv = RESULTS / f"local_fd_sweep_results_{table}.csv"
     with open(out_csv, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=list(results[0].keys()))
         writer.writeheader()

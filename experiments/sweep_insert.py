@@ -7,16 +7,24 @@ Produces graph 1 and 2 for the plot.
 import csv
 import json
 import time
+import pathlib
 import psycopg2
 from psycopg2.extras import execute_values
 
-from undo_lib import log_insertion, undo_insertion
-from naive_lib import naive_log_insertion, naive_storage_bytes, naive_undo_insertion
-from tpcc_rows import make_customer_row
+from database_undo import (
+    log_insertion,
+    undo_insertion,
+    naive_log_insertion,
+    naive_insert_storage_bytes,
+    naive_undo_insertion,
+    make_customer_row,
+    CONN_PARAMS,
+)
 
-CONN_PARAMS = dict(host="localhost", port=5432, dbname="undo_test",
-                    user="undo_user", password="undo_pass")
-PK_COLS = ["c_w_id", "c_d_id", "c_id"]
+RESULTS = pathlib.Path(__file__).resolve().parent.parent / "results"
+RESULTS.mkdir(exist_ok=True)
+
+K_COLS = ["c_w_id", "c_d_id", "c_id"]
 W_ID, D_ID = 1, 40
 
 BATCH_SIZES = [10, 25, 50, 100, 250, 500, 1000, 2000]
@@ -109,7 +117,7 @@ def run_trial(conn, batch_size, slot_index, since_lo, since_hi):
     t0 = time.perf_counter()
     pk_list = naive_log_insertion(batch, PK_COLS)
     naive_log_time = time.perf_counter() - t0
-    naive_bytes = naive_storage_bytes(pk_list)
+    naive_bytes = naive_insert_storage_bytes(pk_list)
  
     t0 = time.perf_counter()
     naive_undo_insertion(conn, "customer", pk_list, PK_COLS)
@@ -152,12 +160,12 @@ if __name__ == "__main__":
             slot_index += 1
     conn.close()
  
-    with open("insert_sweep_results.csv", "w", newline="") as f:
+    with open( RESULTS / "insert_sweep_results.csv", "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=list(results[0].keys()))
         writer.writeheader()
         writer.writerows(results)
-    print(f"\nWrote {len(results)} rows to insert_sweep_results.csv")
- 
+    print(f"\nWrote {len(results)} rows to {RESULTS / 'insert_sweep_results.csv'}")
+     
     n_mismatches = sum(1 for r in results if not r["correctness_ok"])
     if n_mismatches:
         print(f"\nWARNING: {n_mismatches} trial(s) did not produce the expected 2-box, 0-exception split")

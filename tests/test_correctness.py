@@ -6,9 +6,14 @@
 import json
 import psycopg2
 from psycopg2.extras import RealDictCursor, execute_values
-from undo_lib import log_insertion, undo_insertion, count_in_box
-from tpcc_rows import make_customer_row
 
+from database_undo import (
+    log_insertion,
+    undo_insertion,
+    count_in_box,
+    make_customer_row,
+    CONN_PARAMS,
+)
 
 def box_storage_bytes(boxes, exception_ids):
     return len(json.dumps(boxes, default=str)) + len(json.dumps(exception_ids))
@@ -17,8 +22,6 @@ def box_storage_bytes(boxes, exception_ids):
 def naive_storage_bytes(pk_tuples):
     return len(json.dumps(pk_tuples))
 
-CONN_PARAMS = dict(host="localhost", port=5432, dbname="undo_test",
-                    user="undo_user", password="undo_pass")
 PK_COLS = ["c_w_id", "c_d_id", "c_id"]
 
 

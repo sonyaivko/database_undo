@@ -9,12 +9,10 @@ import string
 import datetime
 import psycopg2 # for DB connection 
 
-from tpcc_rows import rand_str, rand_zip, make_customer_row
+from .tpcc_rows import rand_str, rand_zip, make_customer_row
+from .db_config import CONN_PARAMS
 
-CONN_PARAMS = dict(host="localhost", port=5432, dbname="undo_test",
-                    user="undo_user", password="undo_pass")
-
-random.seed(42)  # reproducible runs -- unseed later if you want variance across repeats
+random.seed(42)  # reproducible runs 
 
 # generate tuples according to tpc-c schema 
 
@@ -80,7 +78,7 @@ def load(conn, table, rows, cols=None):
 
 # populates the schema. only 4/9 tables
 
-if __name__ == "__main__":
+def main(argv=None):
     conn = psycopg2.connect(**CONN_PARAMS)
 
     N_WAREHOUSES = 2
@@ -103,4 +101,11 @@ if __name__ == "__main__":
     for t in ["WAREHOUSE", "DISTRICT", "ITEM", "CUSTOMER"]:
         cur.execute(f"SELECT COUNT(*) FROM {t}")
         print(t, cur.fetchone()[0])
+
     conn.close()
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(main())
