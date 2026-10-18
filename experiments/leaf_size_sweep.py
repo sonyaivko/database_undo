@@ -22,7 +22,7 @@ from database_undo import (
 RESULTS = pathlib.Path(__file__).resolve().parent.parent / "results"
 RESULTS.mkdir(exist_ok=True)
 
-K_COLS = ["c_w_id", "c_d_id", "c_id"]
+PK_COLS = ["c_w_id", "c_d_id", "c_id"]
 W_ID, D_ID = 1, 50
 SIZES = [5, 10, 15, 20, 23, 25, 30, 40, 50, 75, 100]
 

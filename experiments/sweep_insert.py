@@ -24,7 +24,7 @@ from database_undo import (
 RESULTS = pathlib.Path(__file__).resolve().parent.parent / "results"
 RESULTS.mkdir(exist_ok=True)
 
-K_COLS = ["c_w_id", "c_d_id", "c_id"]
+PK_COLS = ["c_w_id", "c_d_id", "c_id"]
 W_ID, D_ID = 1, 40
 
 BATCH_SIZES = [10, 25, 50, 100, 250, 500, 1000, 2000]
