@@ -27,7 +27,7 @@ from database_undo import (
 RESULTS = pathlib.Path(__file__).resolve().parent.parent / "results"
 RESULTS.mkdir(exist_ok=True)
 
-BATCH_SIZES = [5, 10, 25, 50, 100, 250, 500, 1000]
+BATCH_SIZES = [5, 10, 25, 50, 100]
 TRIALS_PER_SIZE = 3
 
 
