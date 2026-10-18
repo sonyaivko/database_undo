@@ -72,7 +72,7 @@ def load(conn, table, rows, cols=None):
     cur.execute(f"SET client_min_messages TO WARNING")
     from psycopg2.extras import execute_values
     sql = f"INSERT INTO {table} {col_clause} VALUES %s"
-    execute_values(cur, sql, rows, page_size=500)
+    execute_values(cur, sql, values, page_size=500)
     conn.commit()
     cur.close()
 
