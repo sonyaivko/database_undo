@@ -171,21 +171,6 @@ batch=  100 trial=0  storage ratio=0.657x  log_time ratio=151988.78x  undo_time 
  
 See [Known limitations](#known-limitations).
  
-### Troubleshooting
- 
-| symptom | cause and fix |
-|---|---|
-| `ModuleNotFoundError: psycopg2` | virtualenv not active — `source .venv/bin/activate` |
-| `ModuleNotFoundError: pandas` | `pip install -e '.[plots]'` — quote the brackets in zsh |
-| `bind: address already in use` on 5432 | another PostgreSQL. `sudo lsof -iTCP:5432 -sTCP:LISTEN` to find it; or map `-p 5433:5432` and `export UNDO_DB_PORT=5433` in every terminal |
-| `ValueError: UNDO_DB_PORT=... is not a valid port` | malformed variable. Fires on import, not connect, since `CONN_PARAMS` is built at module level |
-| `could not connect to server` | wrong target, or the container is not ready yet. Print the target with `python3 -c "from database_undo import conn_params; print(conn_params())"` |
-| `FileNotFoundError` from a plot | run the matching sweep first. `plot_insert.py` needs both `sweep_insert.py` and `leaf_size_sweep.py` |
- 
-`ValueError: Cannot reconstruct column ...` from `undo_deletion` is not a
-bug. See
-[Known limitations](#known-limitations).
- 
 ### Environment
  
 Connection settings come from the environment with these defaults.
