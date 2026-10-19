@@ -1,7 +1,7 @@
 ## Usage
  
-Two mechanisms are in use: **bounding boxes** for undoing INSERTs (steps
-3–5) and **per-batch predict-and-patch** for undoing DELETEs (step 6). Step
+Two mechanisms are in use: bounding boxes for undoing INSERTs (steps
+3–5) and per-batch predict-and-patch for undoing DELETEs (step 6). Step
 7 is an optional comparison using a black-box algorithm.
 
 Step 1 requires the install, the rest need PostgreSQL. 
@@ -71,8 +71,7 @@ size= 100  boxes=1 exc=0  box_bytes=354  naive_bytes=1400  ratio=0.253x
 ```
  
 `box_bytes` is flat at 351–354 while `naive_bytes` grows ~13 bytes per
-row — one box is one set of bounds however many rows fall inside. The curves
-cross between 25 and 30 rows. 
+row. The curves cross between 25 and 30 rows. 
  
 #### 5. Reproduce the insert experiment
  
@@ -179,12 +178,12 @@ See [Known limitations](#known-limitations).
 | `ModuleNotFoundError: psycopg2` | virtualenv not active — `source .venv/bin/activate` |
 | `ModuleNotFoundError: pandas` | `pip install -e '.[plots]'` — quote the brackets in zsh |
 | `bind: address already in use` on 5432 | another PostgreSQL. `sudo lsof -iTCP:5432 -sTCP:LISTEN` to find it; or map `-p 5433:5432` and `export UNDO_DB_PORT=5433` in every terminal |
-| `ValueError: UNDO_DB_PORT=... is not a valid port` | malformed variable. Fires on **import**, not connect, since `CONN_PARAMS` is built at module level |
+| `ValueError: UNDO_DB_PORT=... is not a valid port` | malformed variable. Fires on import, not connect, since `CONN_PARAMS` is built at module level |
 | `could not connect to server` | wrong target, or the container is not ready yet. Print the target with `python3 -c "from database_undo import conn_params; print(conn_params())"` |
-| `FileNotFoundError` from a plot | run the matching sweep first. `plot_insert.py` needs **both** `sweep_insert.py` and `leaf_size_sweep.py` |
+| `FileNotFoundError` from a plot | run the matching sweep first. `plot_insert.py` needs both `sweep_insert.py` and `leaf_size_sweep.py` |
  
 `ValueError: Cannot reconstruct column ...` from `undo_deletion` is not a
-bug — it is the live-table dependency of the superseded path. See
+bug. See
 [Known limitations](#known-limitations).
  
 ### Environment
@@ -210,7 +209,6 @@ Sweeps write CSVs and plots write PNGs to `results/`.
 `dbundo-discover-fds` writes `<csv>_fds.json`. 
 `results/` is gitignored.
  
----
  
 ## API
  
@@ -276,7 +274,7 @@ Reconstructs and re-inserts every logged row and commits.
 - `topo_order`: from `topological_order(rules)`
 - Returns: `int` rows inserted.
 - Raises: `ValueError` if a rule has no mapping entry for a row and no patch
-  supplies the cell.
+  for the cell.
 ```python
 from database_undo import (
     discover_rules, topological_order,
