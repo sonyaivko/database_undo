@@ -1,14 +1,33 @@
-## Usage
- 
-Two mechanisms are in use: bounding boxes for undoing INSERTs (steps
-3–5) and per-batch predict-and-patch for undoing DELETEs (step 6). Step
-7 is an optional comparison using a black-box algorithm.
+# database_undo
 
-Step 1 requires the install, the rest need PostgreSQL. 
+Storage-efficient undo for SQL INSERT and DELETE batches.
+To reverse a bulk update to a database, naively, we can keep a copy. This uses a lot of storage. 
+
+This is a research prototype that focuses on storage compression for undoing bulk INSERTs, DELETEs, and eventually UPDATEs. Inserts are logged as a few bounding-box predicates instead of a key list, and deletes are logged via functional dependencies. It is built for experiments. 
+
+## Table of Contents
  
-### CLI
+1. [Install](#install)
+2. [Usage](#usage)
+3. [API](#api)
+4. [Maintainers](#maintainers)
+5. [Credits](#credits)
+
+## Install
  
-#### 1. Confirm the install
+This project uses Python 3.10+ and PostgreSQL 16+. Docker is the easiest way to
+get the database.
+
+The clone command: 
+
+```console
+$ git clone https://github.com/sonyaivko/database_undo
+$ cd database_undo
+$ python3 -m venv .venv && source .venv/bin/activate
+$ pip install -e '.[plots]'
+```
+ 
+To confirm installation run this sanity check:
  
 ```console
 $ python3 tests/test_split_fn.py
@@ -19,12 +38,20 @@ PASS  test_max_gap_split_is_the_default
  
 PASS: split_fn extension point verified
 ```
+
+## Usage
  
-#### 2. Start a database
+Two mechanisms are in use: bounding boxes for undoing INSERTs (steps
+2-4) and per-batch predict-and-patch for undoing DELETEs (step 5). Step
+6 is an optional comparison using a black-box algorithm.
+
+ 
+### CLI
+ 
+#### 1. Start a database
 
 If you already have a server, skip this and use the variables
-in [Environment](#environment). If port 5432 is taken, see
-[Troubleshooting](#troubleshooting).
+in [Environment](#environment).
  
 ```console
 $ docker run --name undo-postgres \
@@ -42,7 +69,7 @@ ITEM 1000
 CUSTOMER 6000
 ```
  
-#### 3. Undo a batch of INSERTs
+#### 2. Undo a batch of INSERTs
  
 ```console
 $ python3 tests/test_correctness.py
@@ -59,7 +86,9 @@ district 6 (control, must be untouched): before=300, after=300
 PASS: exact rollback, no collateral damage to district 6
 ```
  
-#### 4. Run the comparison of leaf sizes
+#### 3. Run the comparison of leaf sizes
+
+A box costs the same whatever the batch size. So, there must be a size where bounding boxes are not worth doing. We can run an experiment to find the storage compression for leaves (boxes) of different sizes. 
  
 ```console
 $ python3 experiments/leaf_size_sweep.py
@@ -71,9 +100,9 @@ size= 100  boxes=1 exc=0  box_bytes=354  naive_bytes=1400  ratio=0.253x
 ```
  
 `box_bytes` is flat at 351–354 while `naive_bytes` grows ~13 bytes per
-row. The curves cross between 25 and 30 rows. 
+row. The curves cross between 25 and 30 rows, so below is not worth it. 
  
-#### 5. Reproduce the insert experiment
+#### 4. Reproduce the insert experiment
  
 ```console
 $ python3 experiments/sweep_insert.py
@@ -98,7 +127,7 @@ $ python3 experiments/plot_insert.py
 saved <repo>/results/insert_sweep_plot.png
 ```
  
-#### 6. Undo DELETEs- per-batch dependencies
+#### 5. Undo a batch of DELETEs
  
 Mines dependencies from the deleted rows. Start by asking what is compressible:
  
@@ -122,13 +151,13 @@ batch= 1000 trial=0  storage ratio=0.356x  discovery=173.5ms log=5.20ms undo=559
 Wrote 24 rows to <repo>/results/local_fd_sweep_results_customer.csv
 ```
  
-#### 7. Optional: the global-FD path, for comparison
+#### 6. Optional: global-FD path
  
-An earlier approach, kept so the difference can be measured. It mines
+This was an earlier approach, kept so the difference can be measured. It mines
 dependencies from a whole table once using [Desbordante][desbordante], then
-resolves them with a live query at undo time.
+acceses them with a query.
  
-**This is not the design any more.** It puts dependency discovery inside 
+This is not the design any more. It puts dependency discovery inside 
 an external solver (Desbordante) we treat as a black box, and the measurements below
 show it increasing runtime by orders of magnitude. 
  
@@ -148,7 +177,7 @@ $ dbundo-discover-fds customer.csv c_w_id c_d_id c_id
 Wrote customer_fds.json
 ```
  
-169 of 176 dependency candidates are discarded. All seven survivors 
+169 of 176 dependency candidates are discarded. All seven surviving candidates 
 have an empty left-hand side over one group of 6000 rows, i.e. they are constants.
  
 ```console
@@ -169,7 +198,6 @@ batch=   50 trial=0  storage ratio=0.656x  log_time ratio=95563.59x  undo_time r
 batch=  100 trial=0  storage ratio=0.657x  log_time ratio=151988.78x  undo_time ratio=10.96x
 ```
  
-See [Known limitations](#known-limitations).
  
 ### Environment
  
@@ -197,7 +225,7 @@ Sweeps write CSVs and plots write PNGs to `results/`.
  
 ## API
  
-40 names are exported. 
+We have five active API, and 35 supporting exports not listed below. 
  
 ### `log_insertion(conn, table, batch_rows, pk_cols, split_fn=max_gap_split)`
  
@@ -211,15 +239,15 @@ Call after the insert, before the undo. Reads only.
 - Returns: `(boxes, exception_ids)`. A box is
   `{"eq": {col: value}, "range": {col: (lo, hi)}, "set": {col: {values}}}`;
   `exception_ids` is a list of primary-key tuples.
+  
 Every box is exact. Below roughly 27 rows it returns no boxes and puts every row
-in `exception_ids`.
+in `exception_ids` (see Step 3). 
  
 ### `undo_insertion(conn, table, boxes, exception_ids, pk_cols)`
  
-One `DELETE ... WHERE <box>` per box, plus one for the exception keys.
-Commits.
+One `DELETE ... WHERE <box>` per box, plus one for the exception keys, then commits. 
  
-- Returns: `int` rows deleted — compare with your batch size.
+- Returns: `int` rows deleted.
 ```python
 from database_undo import log_insertion, undo_insertion
  
@@ -231,7 +259,7 @@ assert deleted == len(batch)
  
 ### `discover_rules(batch_rows, pk_cols, **tuning)`
  
-Approximate functional dependencies within one batch, by greedily growing a
+Discovers approximate functional dependencies within one batch, by greedily growing a
 predictor set per target column.
  
 - `batch_rows` (list of dict), `pk_cols` (list of str).
@@ -242,7 +270,8 @@ predictor set per target column.
 - Returns: `{target: rule}`, where a rule holds `source` (predictor columns,
   `[]` for a constant), `mapping` (predictor tuple → value), `coverage`,
   `baseline`, `likely_real`, `rows_free`, `rows_patched`, `bytes_saved`,
-  `bytes_still_needed`. `{}` for an empty batch. 
+  `bytes_still_needed`. `{}` for an empty batch.
+  
 `likely_real` is a label, not a filter: a rule marked `False` is still
 returned and used. It flags rules that barely beat guessing the most common
 value.
@@ -254,7 +283,7 @@ value.
   a rule gets wrong. 
 ### `undo_batch_deletion(conn, table, pk_cols, deleted_log, fd_patch, rules, topo_order)`
  
-Reconstructs and re-inserts every logged row and commits.
+Reconstructs and re-inserts every logged row, then commits.
  
 - `topo_order`: from `topological_order(rules)`
 - Returns: `int` rows inserted.
@@ -276,7 +305,7 @@ n = undo_batch_deletion(conn, "customer", pk_cols, deleted_log, fd_patch,
 ### Optional: Desbordante global-FD path
  
 The two functions below belong to the earlier whole-table approach described
-in [Usage step 7](#7-optional-the-global-fd-path-for-comparison). They work
+in [Usage step 6](#6-optional-the-global-fd-path-for-comparison). They work
 and are exported, but they are not the recommended path.
  
 #### `log_deletion(conn, table, row, pk_cols, rules, batch_pks=None)`
@@ -296,3 +325,23 @@ Reconstructs one row and inserts it if absent and commits.
 - Returns: `(reconstructed, existed_already)`.
 - Raises: `ValueError` if no row shares a column's predictor
   values and there is no overriding patch.
+
+## Maintainers
+ 
+[Sonya Ivkovic](https://github.com/sonyaivko) — undergraduate research
+volunteer, UMass Amherst CICS. 
+
+## Credits 
+
+The prototype, the experiments and this README are my own work. The project is supervised by Riddho R. Haque (UMass Amherst), who proposed the problem and directed the approach. 
+
+Furthermore, this was built on and informed by: 
+- [Desbordante](https://github.com/Desbordante/desbordante-core) for HyFD
+  functional-dependency mining.
+- [TPC-C](https://www.tpc.org/tpcc/) for the schema and row shape specification in
+  `schema/tpcc_postgres.sql` and `database_undo.tpcc_gen`. 
+- [NC State Board of Elections voter registration data](https://www.ncsbe.gov/results-data/voter-registration-data)
+  is the schema in `schema/voter_schema.sql`.
+
+  - Claude (Anthropic) was used to help restructure `src/` into an installable package. 
+
